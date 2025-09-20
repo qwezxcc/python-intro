@@ -1,11 +1,6 @@
 import json
 import os
 
-schedule = {
-    'Понеділок': ['Алгебра', 'Фізика', 'Історія'],
-    'Понеділок': ['Геометрія', 'Англійська', 'Хімія']
-}
-
 FILENAME = 'schedule.json'
 schedule = {}
 
@@ -14,7 +9,11 @@ if os.path.exists(FILENAME):
         schedule = json.load(f)
 
 
-elif
+else:
+    schedule = {
+        'Понеділок': ['Алгебра', 'Фізика', 'Історія'],
+        'Понеділок': ['Геометрія', 'Англійська', 'Хімія']
+    }
 
 while True:
     print('-' * 40)
