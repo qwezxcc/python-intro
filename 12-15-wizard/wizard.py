@@ -31,6 +31,7 @@ class Wizard:
     SPEED = 10
     START_X = 10
     START_Y = 500
+    TIME_FRAME: int = 100
 
     def __init__(self):
         self.x = self.START_X
@@ -93,7 +94,7 @@ class Wizard:
 
     def update_animation(self, current_time):
         if self.is_moving:
-            if current_time - self.last_frame_time >= 100:
+            if current_time - self.last_frame_time >= self.TIME_FRAME:
                 self.frame_index = ((self.frame_index + 1) % len(self.current_frames))
                 self.image = self.current_frames[self.frame_index]
                 self.last_frame_time = current_time
@@ -103,12 +104,57 @@ class Wizard:
 
 # === Клас діаманта ===
 class Diamond:
-    pass
+    def __init__(self, image):
+        self.image = image
+        self.width = self.image.get_width()
+        self.y = 0
+        self.x = random.randint(self.width, SCREEN_WIDTH - self.width)
+        self.speed = random.randint(DIAMOND_SPEED_MIN, DIAMOND_SPEED_MAX)
+
+    def show(self):
+        x = self.x - self.image.get_width() // 2
+        y = self.y
+        screen.blit(self.image, (x, y))
+
+    def fall(self):
+
+        self.y += self.speed
 
 
 # === Менеджер діамантів ===
 class Diamonds:
-    pass
+    def __init__(self):
+        self.images = self._load_images()
+        self.list = []
+
+    def _load_images(self):
+        paths = ['diamond/s1.png', 'diamond/s2.png', 'diamond/s3.png']
+
+        return [pygame.image.load(IMAGES_PATH + p) for p in paths]
+
+    def add(self):
+        self.list.append(Diamond(random.choice(self.images)))
+
+    def draw(self):
+        for diamond in self.list:
+            diamond.show()
+
+    def fall(self):
+
+        for diamond in self.list:
+            diamond.fall()
+
+    def check_collision(self, player):
+        for diamond in self.list:
+            rect_d = diamond.image.get_rect(topleft=(diamond.x - diamond.image.get_width(), diamond.y))
+            rect_p = pygame.Rect(player.x, player.y, player.WIDTH, player.HEIGHT)
+
+            if rect_p.colliderect(rect_d):
+                self.list.remove(diamond)
+                return (1, diamond.x, diamond.y)
+
+
+
 
 
 # === Візуальні ефекти ===
@@ -141,6 +187,10 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.run = False
+                elif event.type == DIAMOND_EVENT:
+                    self.diamonds.add()
+                    r = random.randint(DIAMOND_SPAWN_TIME_MIN_MS, DIAMOND_SPAWN_TIME_MAX_MS)
+                    pygame.time.set_timer(DIAMOND_EVENT, r)
 
             keys_pressed = pygame.key.get_pressed()
             self.player.move(keys_pressed, current_time)
@@ -148,6 +198,8 @@ class Game:
             # drawing events on screen
             self._draw_background()
             self.player.show()
+            self.diamonds.draw()
+            self.diamonds.fall()
 
             pygame.display.update()
             clock.tick(FPS)
