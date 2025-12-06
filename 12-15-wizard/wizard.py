@@ -64,7 +64,7 @@ class Wizard:
         else:
             self.x = 0
 
-        print('L', self.x)
+        #print('L', self.x)
 
     def move_right(self):
         if self.x + self.SPEED <= SCREEN_WIDTH - self.WIDTH:
@@ -72,7 +72,7 @@ class Wizard:
         else:
             self.x = SCREEN_WIDTH - self.WIDTH
 
-        print('R', self.x)
+        #print('R', self.x)
 
     def move(self, keys_pressed: pygame.key.ScancodeWrapper, current_time: int):
 
@@ -145,13 +145,17 @@ class Diamonds:
             diamond.fall()
 
     def check_collision(self, player):
-        for diamond in self.list:
-            rect_d = diamond.image.get_rect(topleft=(diamond.x - diamond.image.get_width(), diamond.y))
+        for diamond in self.list[:]:
+            rect_d = diamond.image.get_rect(topleft=(diamond.x - diamond.image.get_width() // 2, diamond.y))
             rect_p = pygame.Rect(player.x, player.y, player.WIDTH, player.HEIGHT)
 
             if rect_p.colliderect(rect_d):
                 self.list.remove(diamond)
                 return (1, diamond.x, diamond.y)
+            elif diamond.y > SCREEN_HEIGHT - 20:
+                self.list.remove(diamond)
+                return(-1, diamond.x, diamond.y)
+        return(0, None, None)
 
 
 
@@ -159,7 +163,33 @@ class Diamonds:
 
 # === Візуальні ефекти ===
 class FloatingText:
-    pass
+    def __init__(self, text, x, y):
+        self.text = text
+        self.color = self._color()
+        self.x = x
+        self.y = y
+        self.alpha = 255
+        self.font = pygame.font.SysFont('Arial', 40)
+
+    def _color(self):
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+        return r, g, b
+
+    def update(self):
+        self.y -= 2
+        self.alpha -= 2
+
+    def draw(self, surface):
+        text_surface = self.font.render(self.text, True, self.color)
+        text_surface.set_alpha(self.alpha)
+        surface.blit(text_surface, (self.x, self.y))
+
+    def is_alive(self):
+        return self.alpha > 0
+
+
 
 
 # === Основна гра ===
@@ -180,6 +210,11 @@ class Game:
     def _draw_background(self):
         screen.blit(self.background, (0, 0))
 
+    def _draw_score(self):
+        font = pygame.font.SysFont('Arial', 40)
+        text = font.render(f"Collected: {self.catch}, Losted: {self.lost}", True, "white")
+        screen.blit(text, (10, 10))
+
     def play(self):
         while self.run:
             current_time = pygame.time.get_ticks()
@@ -195,11 +230,30 @@ class Game:
             keys_pressed = pygame.key.get_pressed()
             self.player.move(keys_pressed, current_time)
 
+            result, x, y = self.diamonds.check_collision(self.player)
+            if result == 1:
+                self.catch +=1
+                self.effects.append(FloatingText("+1", x, y))
+            elif result == -1:
+                self.lost += 1
+                self.effects.append(FloatingText("-1", x, y))
+
             # drawing events on screen
             self._draw_background()
             self.player.show()
             self.diamonds.draw()
             self.diamonds.fall()
+
+            for effect in self.effects:
+                effect.update()
+                effect.draw(screen)
+                if not effect.is_alive():
+                    self.effects.remove(effect)
+
+            self._draw_score()
+
+
+
 
             pygame.display.update()
             clock.tick(FPS)
